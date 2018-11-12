@@ -33,6 +33,8 @@ _UNUSED=r'l?chown(32)?|[gs]etxattr|fchmodat|rmdir|mkdir|unlinkat|utimensat|getcw
 _ARG = (r'\{[^}]+\}|' + # {st_mode=S_IFREG|0755, st_size=97736, ...}
         r'"[^"]+"|'   + # "tst.o"
         r'\[[^]]+\]|' + # [{WIFEXITED(s) && WEXITSTATUS(s) == 0}]
+			# 0x7ffc39d83858 /* 104 vars */
+	r'0x[0-9a-fA-F]+\s+/\*\s+[0-9]+\s+vars\s+\*/|' +
         r'\S+')         # O_WRONLY|O_CREAT|O_TRUNC|O_LARGEFILE, et. al.
 _OPS = '%s|%s|%s' % (_FILEOPS, _PROCOPS, _UNUSED)
 
