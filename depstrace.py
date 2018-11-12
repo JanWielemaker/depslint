@@ -193,7 +193,7 @@ class DepsTracer(object):
                        '-f',  # Follow child processes
                        '-a1', # Only one space before return values
                        '-s0', # Print non-filename strings really short to keep parser simpler
-                       '-etrace=file,process', # Trace syscals related to file and process operations (*)
+                       '-etrace=%file,%process', # Trace syscals related to file and process operations (*)
                        '-esignal=none'] + cmd
             V1("Running: %r" % command)
 
