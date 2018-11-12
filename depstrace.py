@@ -116,6 +116,7 @@ class DepsTracer(object):
     # Regular expressions for joining interrupted lines in strace log
     _unfinished_re = re.compile(r'(?P<body>(?P<pid>\d+).*)\s+<unfinished \.\.\.>$')
     _resumed_re   = re.compile(r'(?P<pid>\d+)\s+<\.\.\. \S+ resumed>(?P<body>.*)')
+    _exitted_re   = re.compile(r'(?P<pid>\d+)\s+\+\+\+ exited with \d+ \+\+\+')
 
     def __init__(self, build_dir=None, strict=False):
         self._test_strace_version()
@@ -315,6 +316,10 @@ class DepsTracer(object):
                     continue
                 line = interrupted_syscalls[pid] + body
                 del interrupted_syscalls[pid]
+            match = self._exitted_re.match(line)
+            if match:
+	        pid = match.group('pid')
+		continue
 
             # Parse syscall line
             fop = self._file_re.match(line)
