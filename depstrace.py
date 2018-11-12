@@ -34,7 +34,7 @@ _ARG = (r'\{[^}]+\}|' + # {st_mode=S_IFREG|0755, st_size=97736, ...}
         r'"[^"]+"|'   + # "tst.o"
         r'\[[^]]+\]|' + # [{WIFEXITED(s) && WEXITSTATUS(s) == 0}]
 			# 0x7ffc39d83858 /* 104 vars */
-	r'0x[0-9a-fA-F]+\s+/\*\s+[0-9]+\s+vars\s+\*/|' +
+	r'0x[0-9a-fA-F]+\s+/\*\s+[0-9]+\s+vars\s+\*/\s*|' +
         r'\S+')         # O_WRONLY|O_CREAT|O_TRUNC|O_LARGEFILE, et. al.
 _OPS = '%s|%s|%s' % (_FILEOPS, _PROCOPS, _UNUSED)
 
@@ -109,13 +109,13 @@ class DepsTracer(object):
     # Regular expressions for parsing syscall in strace log
     # TODO: this is VERY slow. We can easily improve this if anyone cares...
     _file_re = re.compile(r'(?P<pid>\d+)\s+' +
-                          r'(?P<op>%s)\(' % _OPS +
-                          r'(?P<arg1>%s)?(, (?P<arg2>%s))?(, (?P<arg3>%s))?(, (%s))*' % (_ARG,_ARG,_ARG,_ARG) +
-                          r'\) = (?P<ret>-?\d+|\?)')
+                          r'(?P<op>%s)\(\s*' % _OPS +
+                          r'(?P<arg1>%s)?(,\s*(?P<arg2>%s))?(,\s*(?P<arg3>%s))?(,\s*(%s))*' % (_ARG,_ARG,_ARG,_ARG) +
+                          r'\s*\) = (?P<ret>-?\d+|\?)')
 
     # Regular expressions for joining interrupted lines in strace log
     _unfinished_re = re.compile(r'(?P<body>(?P<pid>\d+).*)\s+<unfinished \.\.\.>$')
-    _resumed_re   = re.compile(r'(?P<pid>\d+)\s+<\.\.\. \S+ resumed> (?P<body>.*)')
+    _resumed_re   = re.compile(r'(?P<pid>\d+)\s+<\.\.\. \S+ resumed>(?P<body>.*)')
 
     def __init__(self, build_dir=None, strict=False):
         self._test_strace_version()
