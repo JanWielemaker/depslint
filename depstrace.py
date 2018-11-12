@@ -26,7 +26,7 @@ _DEFAULT_OUTFILE = 'deps.lst'
 _STRACE_LOG = 'strace_log.txt'
 _STRACE_FIFO = '/tmp/_strace_log_fifo' # TODO: use tempfile
 
-_FILEOPS=r'open|(sym)?link|rename|chdir|creat' # TODO: handle |openat?
+_FILEOPS=r'open|(sym)?link|rename|chdir|creat|openat' # TODO: handle |openat?
 _PROCOPS=r'clone|execve|v?fork'
 _UNUSED=r'l?chown(32)?|[gs]etxattr|fchmodat|rmdir|mkdir|unlinkat|utimensat|getcwd|chmod|statfs(64)?|l?stat(64)?|access|readlink|unlink|exit_group|waitpid|wait4|arch_prctl|utime'
 
@@ -110,7 +110,7 @@ class DepsTracer(object):
     # TODO: this is VERY slow. We can easily improve this if anyone cares...
     _file_re = re.compile(r'(?P<pid>\d+)\s+' +
                           r'(?P<op>%s)\(' % _OPS +
-                          r'(?P<arg1>%s)?(, (?P<arg2>%s))?(, (%s))*' % (_ARG,_ARG,_ARG) +
+                          r'(?P<arg1>%s)?(, (?P<arg2>%s))?(, (?P<arg3>%s))?(, (%s))*' % (_ARG,_ARG,_ARG,_ARG) +
                           r'\) = (?P<ret>-?\d+|\?)')
 
     # Regular expressions for joining interrupted lines in strace log
@@ -212,7 +212,7 @@ class DepsTracer(object):
 
         # Look for 'ninja' process invocation
         ninja_pid = None
-        for pid, op, ret, arg1, _ in log_iterator:
+        for pid, op, ret, arg1, _, _ in log_iterator:
             if op == 'execve' and ret == '0':
                 path = os.path.normpath(arg1)
                 if path.endswith(_NINJA_PROG_NAME):
@@ -226,7 +226,7 @@ class DepsTracer(object):
         # Track processes spawn under 'ninja' and record their inputs/outputs,
         # grouped by 'rule'. 'Rule' is considered to be process tree
         # parented directly under 'ninja'.
-        for pid, op, ret, arg1, arg2 in log_iterator:
+        for pid, op, ret, arg1, arg2, arg3 in log_iterator:
             # Ignore failed syscalls
             if ret  == '-1':
                 continue
@@ -250,6 +250,17 @@ class DepsTracer(object):
             elif op == 'open':
                 path = self.norm_path(cwd, arg1)
                 mode = arg2
+                if 'O_DIRECTORY' in mode:
+                    # Filter out 'opendir'-s.TBD: does this test worth the cycles?
+                    continue
+                if 'O_RDONLY' in mode:
+                    self.add_dep(pid, path)
+                else:
+                    self.add_output(pid, path)
+            elif op == 'openat':
+		# should test arg1 == AT_FDCWD if arg2 is not absolute
+                path = self.norm_path(cwd, arg2)
+                mode = arg3
                 if 'O_DIRECTORY' in mode:
                     # Filter out 'opendir'-s.TBD: does this test worth the cycles?
                     continue
@@ -312,11 +323,12 @@ class DepsTracer(object):
                 continue
 
             pid, op, ret = fop.group('pid'), fop.group('op'), fop.group('ret')
-            arg1, arg2 = fop.group('arg1'), fop.group('arg2')
+            arg1, arg2, arg3 = fop.group('arg1'), fop.group('arg2'), fop.group('arg3')
             arg1 = arg1.strip('"') if arg1 else arg1
             arg2 = arg2.strip('"') if arg2 else arg2
-            V2("pid=%s, op='%s', arg1=%s, arg2=%s, ret=%s" % (pid, op, arg1, arg2, ret))
-            yield (pid, op, ret, arg1, arg2)
+            arg3 = arg3.strip('"') if arg3 else arg3
+            V2("pid=%s, op='%s', arg1=%s, arg2=%s, arg3=%s, ret=%s" % (pid, op, arg1, arg2, arg3, ret))
+            yield (pid, op, ret, arg1, arg2, arg3)
         if interrupted_syscalls:
             warn("excessive interrupted syscall(s) at the end of trace:")
             for k, v in interrupted_syscalls.iteritems():
