@@ -28,7 +28,7 @@ _STRACE_FIFO = '/tmp/_strace_log_fifo' # TODO: use tempfile
 
 _FILEOPS=r'open|(sym)?link|rename|chdir|creat|openat' # TODO: handle |openat?
 _PROCOPS=r'clone|execve|v?fork'
-_UNUSED=r'l?chown(32)?|[gs]etxattr|fchmodat|rmdir|mkdir|unlinkat|utimensat|getcwd|chmod|statfs(64)?|l?stat(64)?|access|readlink|unlink|exit_group|waitpid|wait4|arch_prctl|utime'
+_UNUSED=r'l?chown(32)?|[gs]etxattr|fchmodat|rmdir|mkdir|unlinkat|utimensat|getcwd|chmod|statfs(64)?|l?stat(64)?|newfstatat|access|faccessat|readlink|unlink|exit_group|waitpid|wait4|arch_prctl|utime|exit'
 
 _ARG = (r'\{[^}]+\}|' + # {st_mode=S_IFREG|0755, st_size=97736, ...}
         r'"[^"]+"|'   + # "tst.o"
