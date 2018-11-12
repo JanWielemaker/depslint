@@ -207,7 +207,7 @@ class NinjaManifestParser(object):
         # Initializing rules list with a 'phony' rule
         self.rules = dict(phony=dict(attributes=[]))
 
-        self._parse()
+        self._parse(input)
         # FIXME: should do this 'per tested target tree' / or on
         # demand. Becomes less urgent with ninja 'deps' support.
         self._load_depfiles()
@@ -218,8 +218,8 @@ class NinjaManifestParser(object):
     def get_default_targets(self):
         return self.default_targets
 
-    def _parse(self):
-        for blk in self._iterate_manifest_blocks(self.input):
+    def _parse(self, input):
+        for blk in self._iterate_manifest_blocks(input):
             if blk[0].startswith('build '):
                 self._handle_build_blk(blk)
             elif blk[0].startswith('rule '):
@@ -289,7 +289,12 @@ class NinjaManifestParser(object):
         pass
 
     def _handle_include(self, blk):
-        fatal("'include' keyword support not implemented, wanna help?")
+        include_str = blk[0][len('include '):]
+        includepath = self._unescape_and_eval(include_str, self.global_attributes)
+	old_input = self.input
+	self.input = file(includepath, "r")
+	self._parse(self.input)
+	self.input = old_input
 
     def _handle_subninja(blk):
         fatal("'subninja' keyword support not implemented, wanna help?")
@@ -417,6 +422,11 @@ class NinjaManifestParser(object):
 
     def _get_edge_attrs(self, edge):
         return self.edges_attributes[edge]
+
+    def _unescape_and_eval(self, s, scope):
+        t = self._eval_attribute(scope, self._unescape(s))
+        V3(">> _unescape_and_eval('%s') -> '%s'" % (s, t))
+        return t
 
     def _split_unescape_and_eval(self, s, scope):
         lst = [self._eval_attribute(scope, x) for x in self._split_and_unescape(s)]
